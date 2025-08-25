@@ -144,4 +144,4 @@ const startServer = async () => {
 
 startServer();
 
-module.exports = app; // vercel deploy
+module.exports = server; // vercel deploy
