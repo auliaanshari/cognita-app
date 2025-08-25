@@ -121,12 +121,12 @@ io.on('connection', (socket) => {
 });
 
 // Routers
-app.use('/api/auth', require('./routes/authRoutes'));
-app.use('/api/tasks', require('./routes/taskRoutes'));
-app.use('/api/columns', require('./routes/columnRoutes'));
-app.use('/api/boards', require('./routes/boardRoutes'));
-app.use('/api/users', require('./routes/userRoutes'));
-app.use('/api/ai', require('./routes/aiRoutes'));
+app.use('/auth', require('./routes/authRoutes'));
+app.use('/tasks', require('./routes/taskRoutes'));
+app.use('/columns', require('./routes/columnRoutes'));
+app.use('/boards', require('./routes/boardRoutes'));
+app.use('/users', require('./routes/userRoutes'));
+app.use('/ai', require('./routes/aiRoutes'));
 
 const PORT = process.env.PORT || 5001;
 
