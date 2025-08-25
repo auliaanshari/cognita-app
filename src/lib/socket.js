@@ -7,4 +7,5 @@ const URL =
 
 export const socket = io(URL, {
   autoConnect: false, // We'll connect manually when the user enters a board
+  path: '/api/socket',
 });

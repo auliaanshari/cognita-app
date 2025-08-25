@@ -25,6 +25,7 @@ const corsOptions = {
 
 const io = new Server(server, {
   cors: corsOptions,
+  path: '/api/socket',
 });
 
 app.set('socketio', io);
