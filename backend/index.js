@@ -14,8 +14,12 @@ dotenv.config();
 const app = express();
 const server = http.createServer(app);
 
+const allowedOrigins = (
+  process.env.CORS_ORIGIN || 'http://localhost:3000'
+).split(',');
+
 const corsOptions = {
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  origin: allowedOrigins,
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
 };
 
