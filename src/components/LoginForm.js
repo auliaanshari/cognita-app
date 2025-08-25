@@ -1,7 +1,8 @@
 // src/components/LoginForm.js
 'use client';
 import { useState } from 'react';
-import axios from 'axios';
+// import axios from 'axios';
+import api from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner'; // <-- 1. Impor toast
 
@@ -29,13 +30,14 @@ export default function LoginForm() {
     setIsLoading(true);
     setError('');
     try {
-      const response = await axios.post(
-        'http://localhost:5001/api/auth/login',
-        {
-          email,
-          password,
-        }
-      );
+      // const response = await axios.post(
+      //   'http://localhost:5001/api/auth/login',
+      //   {
+      //     email,
+      //     password,
+      //   }
+      // );
+      const response = await api.post('/auth/login', { email, password });
       login(response.data.token);
     } catch (err) {
       const errorMessage =
