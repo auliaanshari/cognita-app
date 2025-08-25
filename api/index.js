@@ -145,4 +145,4 @@ const startServer = async () => {
 
 startServer();
 
-module.exports = server; // vercel deploy
+module.exports = httpServer; // vercel deploy
