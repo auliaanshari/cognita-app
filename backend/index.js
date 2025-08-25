@@ -128,9 +128,10 @@ const PORT = process.env.PORT || 5001;
 const startServer = async () => {
   try {
     await connectDB();
-    server.listen(PORT, () => {
-      console.log(`🚀 Server berjalan di port ${PORT}`);
-    });
+    // vercel deploy
+    // server.listen(PORT, () => {
+    //   console.log(`🚀 Server berjalan di port ${PORT}`);
+    // });
   } catch (error) {
     console.error('Gagal memulai server:', error);
     process.exit(1);
@@ -138,3 +139,5 @@ const startServer = async () => {
 };
 
 startServer();
+
+module.exports = app; // vercel deploy
