@@ -68,7 +68,7 @@ export default function AiTutorModal({
         <DialogHeader className="p-6">
           <DialogTitle className="text-2xl">AI Tutor</DialogTitle>
           <DialogDescription>
-            Ajukan pertanyaan tentang tugas: "{task.title}"
+            Ajukan pertanyaan tentang tugas: &ldquo;{task.title}&rdquo;
           </DialogDescription>
         </DialogHeader>
 

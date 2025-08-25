@@ -78,7 +78,17 @@ export default function Board({ boardId }) {
       socket.off('task:removed', handleTaskRemoved);
       socket.off('card:reordered', handleCardReordered);
     };
-  }, [boardId, user?.id]);
+  }, [
+    boardId,
+    user,
+    fetchBoard,
+    addTask,
+    moveCard,
+    removeTask,
+    setColumnTaskIds,
+    updateTask,
+    reorderCardInColumn,
+  ]);
 
   function handleDragStart(event) {
     const card = boardData.tasks.find((t) => t._id === event.active.id);
