@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://localhost:5001/api', // URL dasar backend
+  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL, // vercel deploy
 });
 
 api.interceptors.request.use(
