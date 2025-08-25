@@ -2,6 +2,7 @@
 
 const Task = require('../models/Task');
 const Column = require('../models/Column');
+const pusher = require('../config/pusher');
 
 exports.createTask = async (req, res) => {
   if (req.user.role !== 'mentor') {
@@ -38,20 +39,23 @@ exports.createTask = async (req, res) => {
       .populate('menteeId', 'username email')
       .populate('mentorId', 'username');
 
-    // Kirim notifikasi ke mentee
-    const io = req.app.get('socketio');
-    const menteeRoomId = populatedTask.menteeId._id.toString();
+    const boardChannel = `board-${populatedTask.boardId.toString()}`;
+    const userChannel = `user-${populatedTask.menteeId._id.toString()}`;
+
+    await pusher.trigger(boardChannel, 'task:added', populatedTask);
+    console.log(
+      `[Pusher] Event 'task:added' dikirim ke channel: ${boardChannel}`
+    );
 
     if (populatedTask.mentorId && populatedTask.mentorId.username) {
-      const notificationMessage = {
-        message: `Anda mendapatkan tugas baru: "${populatedTask.title}" dari mentor ${populatedTask.mentorId.username}.`,
+      const notification = {
+        message: `Tugas baru: "${populatedTask.title}" dari ${populatedTask.mentorId.username}.`,
       };
-      io.to(menteeRoomId).emit('notification:new', notificationMessage);
-      console.log(`[Notification] Notifikasi dikirim ke room: ${menteeRoomId}`);
+      await pusher.trigger(userChannel, 'notification:new', notification);
+      console.log(
+        `[Pusher] Event 'notification:new' dikirim ke channel: ${userChannel}`
+      );
     }
-
-    io.to(boardId).emit('task:added', populatedTask);
-    console.log(`[Real-time] Event task:added disebar ke board: ${boardId}`);
 
     res.status(201).json(populatedTask);
   } catch (error) {
@@ -71,17 +75,20 @@ exports.deleteTask = async (req, res) => {
       return res.status(401).json({ message: 'Otorisasi gagal.' });
     }
 
+    const boardId = task.boardId.toString();
+    const taskId = task._id.toString();
+
+    await Task.findByIdAndDelete(req.params.id);
     await Column.updateMany(
       { boardId: task.boardId },
       { $pull: { taskIds: task._id } }
     );
 
-    await Task.findByIdAndDelete(req.params.id);
-
-    const io = req.app.get('socketio');
-    io.to(task.boardId.toString()).emit('task:removed', {
-      taskId: req.params.id,
-    });
+    const boardChannel = `board-${boardId}`;
+    await pusher.trigger(boardChannel, 'task:removed', { taskId: taskId });
+    console.log(
+      `[Pusher] Event 'task:removed' dikirim ke channel: ${boardChannel}`
+    );
 
     res.json({ message: 'Tugas berhasil dihapus.' });
   } catch (error) {

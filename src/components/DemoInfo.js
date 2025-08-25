@@ -1,6 +1,6 @@
 // src/components/DemoInfo.js
 
-import { RocketLaunchIcon } from '@heroicons/react/24/outline'; // Atau ikon lain yang Anda suka
+import { RocketLaunchIcon } from '@heroicons/react/24/outline';
 
 export default function DemoInfo() {
   return (

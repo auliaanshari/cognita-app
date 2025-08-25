@@ -2,7 +2,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import api from '@/lib/api';
-import { socket } from '@/lib/socket';
+import pusher from '@/lib/pusher';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -34,16 +34,13 @@ export default function CommentModal({ task, isOpen, onClose, currentUserId }) {
         .catch((error) => console.error('Gagal memuat komentar:', error))
         .finally(() => setIsLoading(false));
 
-      socket.emit('task:join', task._id);
-      const handleNewComment = (commentData) => {
-        setComments((prevComments) => [...prevComments, commentData]);
-      };
-      socket.on('comment:added', handleNewComment);
+      const channel = pusher.subscribe(`task-${task._id}`);
+      channel.bind('comment:added', (newComment) => {
+        setComments((prevComments) => [...prevComments, newComment]);
+      });
 
-      // Cleanup function saat komponen unmount atau modal ditutup
       return () => {
-        socket.emit('task:leave', task._id);
-        socket.off('comment:added', handleNewComment);
+        pusher.unsubscribe(`task-${task._id}`);
       };
     }
   }, [isOpen, task._id]); // Jalankan ulang jika task atau status modal berubah

@@ -1,10 +1,11 @@
 // src/components/Board.js
 
 'use client';
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import { DndContext, DragOverlay, closestCorners } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
-import { socket } from '@/lib/socket';
+import pusher from '@/lib/pusher';
+import api from '@/lib/api';
 import { useBoardStore } from '@/store/boardStore';
 import { useAuth } from '@/context/AuthContext';
 
@@ -19,9 +20,10 @@ import TaskListSkeleton from './skeletons/TaskListSkeleton';
 import { Skeleton } from './ui/skeleton';
 
 export default function Board({ boardId }) {
-  const loading = useBoardStore((state) => state.loading);
-  const boardData = useBoardStore((state) => state.boardData);
-
+  const { boardData, loading } = useBoardStore((state) => ({
+    boardData: state.boardData,
+    loading: state.loading,
+  }));
   const {
     fetchBoard,
     moveCard,
@@ -30,91 +32,69 @@ export default function Board({ boardId }) {
     removeTask,
     reorderCardInColumn,
     setColumnTaskIds,
-  } = useBoardStore.getState();
+  } = useBoardStore();
   const { user, logout } = useAuth();
   const [activeCard, setActiveCard] = useState(null);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !boardId) return;
 
     fetchBoard(boardId);
 
-    if (!socket.connected) {
-      socket.connect();
-    }
-
-    const onConnect = () => {
-      console.log('Terhubung ke board socket!');
-      socket.emit('board:join', boardId);
-    };
-
-    socket.on('connect', onConnect);
-
-    const handleCardMoved = (data) => {
-      console.log('Event card:moved diterima:', data);
-      moveCard(data.cardId, data.sourceColumnId, data.destColumnId);
-      if (data.updatedTask) {
-        updateTask(data.updatedTask);
-      }
-    };
+    const channel = pusher.subscribe(`board-${boardId}`);
 
     const handleTaskAdded = (newTask) => addTask(newTask);
     const handleTaskRemoved = (data) => removeTask(data.taskId);
-
+    const handleCardMoved = (data) => {
+      moveCard(data.taskId, data.sourceColumnId, data.destColumnId);
+      if (data.updatedTask) updateTask(data.updatedTask);
+    };
     const handleCardReordered = (data) => {
       setColumnTaskIds(data.columnId, data.taskIds);
     };
 
-    socket.on('card:moved', handleCardMoved);
-    socket.on('task:added', handleTaskAdded);
-    socket.on('task:removed', handleTaskRemoved);
-    socket.on('card:reordered', handleCardReordered);
+    channel.bind('task:added', handleTaskAdded);
+    channel.bind('task:removed', handleTaskRemoved);
+    channel.bind('card:moved', handleCardMoved);
+    channel.bind('card:reordered', handleCardReordered);
 
     return () => {
-      console.log('Memutuskan koneksi dari board socket...');
-      socket.off('connect');
-      socket.off('card:moved', handleCardMoved);
-      socket.off('task:added', handleTaskAdded);
-      socket.off('task:removed', handleTaskRemoved);
-      socket.off('card:reordered', handleCardReordered);
+      pusher.unsubscribe(`board-${boardId}`);
     };
   }, [
     boardId,
     user,
-    fetchBoard,
     addTask,
-    moveCard,
     removeTask,
-    setColumnTaskIds,
+    moveCard,
     updateTask,
-    reorderCardInColumn,
+    setColumnTaskIds,
+    fetchBoard,
   ]);
 
   function handleDragStart(event) {
+    if (!boardData?.tasks) return;
     const card = boardData.tasks.find((t) => t._id === event.active.id);
     setActiveCard(card);
   }
 
   function handleDragEnd(event) {
     setActiveCard(null);
+    if (!boardData) return;
     const { active, over } = event;
     if (!over) return;
 
     const activeId = active.id;
     const overId = over.id;
-
     const activeContainer = active.data.current?.sortable?.containerId;
     const overContainer = over.data.current?.sortable?.containerId || over.id;
 
-    if (
-      !activeContainer ||
-      !overContainer ||
-      activeContainer === overContainer
-    ) {
+    if (activeContainer === overContainer) {
       if (activeId !== overId) {
         const activeColumn = boardData.columns.find(
           (c) => c._id === activeContainer
         );
+        if (!activeColumn) return;
         const oldIndex = activeColumn.taskIds.indexOf(activeId);
         const newIndex = activeColumn.taskIds.indexOf(overId);
 
@@ -126,38 +106,48 @@ export default function Board({ boardId }) {
           newIndex
         );
 
-        socket.emit('card:reorder', {
-          boardId,
-          columnId: activeContainer,
-          taskIds: newOrderedIds,
-        });
+        api
+          .put(
+            '/drag/reorder',
+            {
+              columnId: activeContainer,
+              taskIds: newOrderedIds,
+            },
+            { params: { boardId } }
+          )
+          .catch((err) => {
+            toast.error('Gagal menyimpan urutan kartu.');
+            // Logika untuk mengembalikan urutan jika gagal
+          });
       }
     } else {
-      const activeColumn = boardData.columns.find(
-        (c) => c._id === activeContainer
-      );
-      const overColumn = boardData.columns.find((c) => c._id === overContainer);
-      if (!activeColumn || !overColumn) return;
-
+      if (!activeContainer || !overContainer) return;
       moveCard(activeId, activeContainer, overContainer); // Update UI
 
-      const task = boardData.tasks.find((t) => t._id === activeId);
-      const newStatus = overColumn.title;
+      const overColumn = boardData.columns.find((c) => c._id === overContainer);
+      if (!overColumn) {
+        updateTask({ _id: activeId, status: overColumn.title });
+      }
 
-      updateTask({ ...task, status: newStatus }); // Update status di state
-
-      socket.emit('card:move', {
-        boardId,
-        cardId: activeId,
-        sourceColumnId: activeContainer,
-        destColumnId: overContainer,
-      });
+      api
+        .put(
+          '/drag/move',
+          {
+            taskId: activeId,
+            sourceColumnId: activeContainer,
+            destColumnId: overContainer,
+          },
+          { params: { boardId } }
+        )
+        .catch((err) => {
+          toast.error('Gagal memindahkan kartu.');
+          // Logika untuk mengembalikan kartu jika gagal
+        });
     }
   }
 
   const handleTaskCreated = (newTask) => {
     addTask(newTask);
-    socket.emit('task:add', { boardId, newTask });
   };
 
   const handleTaskDelete = (taskId) => {
@@ -174,10 +164,6 @@ export default function Board({ boardId }) {
     }
     setSelectedTaskForAI(task);
     setIsAiModalOpen(true);
-  };
-
-  const handleCloseAiModal = () => {
-    setIsAiModalOpen(false);
   };
 
   if (loading || !user) {
@@ -256,7 +242,7 @@ export default function Board({ boardId }) {
         <AiTutorModal
           task={selectedTaskForAI}
           isOpen={isAiModalOpen}
-          onClose={handleCloseAiModal}
+          onClose={() => setIsAiModalOpen(false)}
           conversation={conversation}
           setConversation={setConversation}
         />

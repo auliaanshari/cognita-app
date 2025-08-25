@@ -2,7 +2,7 @@
 
 'use client';
 import { useEffect, useState } from 'react';
-import { socket } from '@/lib/socket';
+import pusher from '@/lib/pusher';
 import { useAuth } from '@/context/AuthContext';
 import { BellIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 
@@ -22,27 +22,16 @@ export default function Notifications() {
   useEffect(() => {
     if (!user) return;
 
-    function onConnect() {
-      console.log('✅ [Socket] Terhubung ke server untuk notifikasi!');
-      socket.emit('user:join', user.id);
-    }
+    const channel = pusher.subscribe(`user-${user.id}`);
 
-    function onNewNotification(notification) {
-      console.log('🟣 [Notifications] Notifikasi BARU diterima:', notification);
+    channel.bind('notification:new', (notification) => {
+      console.log('🟣 Notifikasi Pusher diterima:', notification);
       setNotifications((prev) => [notification, ...prev]);
       setHasUnread(true);
-    }
-
-    if (!socket.connected) {
-      socket.connect();
-    }
-    socket.on('connect', onConnect);
-    socket.on('notification:new', onNewNotification);
+    });
 
     return () => {
-      console.log('[Socket] Membersihkan listener notifikasi...');
-      socket.off('connect', onConnect);
-      socket.off('notification:new', onNewNotification);
+      pusher.unsubscribe(`user-${user.id}`);
     };
   }, [user]);
 

@@ -1,6 +1,7 @@
 // backend/controllers/commentController.js
 const Comment = require('../models/Comment');
 const Task = require('../models/Task');
+const pusher = require('../config/pusher');
 
 /**
  * @desc    Mendapatkan semua komentar untuk sebuah tugas
@@ -43,10 +44,14 @@ exports.addComment = async (req, res) => {
       'username'
     );
 
-    const io = req.app.get('socketio');
-    const taskId = req.params.taskId;
-    io.to(taskId).emit('comment:added', populatedComment);
-    console.log(`Komentar baru disiarkan ke room tugas ${taskId}`);
+    await pusher.trigger(
+      `task-${req.params.taskId}`,
+      'comment:added',
+      populatedComment
+    );
+    console.log(
+      `Komentar baru dikirim ke Pusher channel task-${req.params.taskId}`
+    );
 
     res.status(201).json(populatedComment);
   } catch (error) {

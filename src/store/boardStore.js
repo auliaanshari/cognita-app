@@ -27,7 +27,7 @@ export const useBoardStore = create((set) => ({
         boardData: {
           ...state.boardData,
           tasks: state.boardData.tasks.map((task) =>
-            task._id === updatedTask._id ? updatedTask : task
+            task._id === updatedTask._id ? { ...task, ...updatedTask } : task
           ),
         },
       };
@@ -54,12 +54,12 @@ export const useBoardStore = create((set) => ({
         console.error("Could not find the 'To Do' column.");
         return state;
       }
-      const newColumns = state.boardData.columns.map((col) => {
-        if (col._id === todoColumn._id) {
-          return { ...col, taskIds: [...col.taskIds, newTask._id] };
-        }
-        return col;
-      });
+      const newColumns = state.boardData.columns.map((col) =>
+        col._id === todoColumn._id
+          ? { ...col, taskIds: [...col.taskIds, newTask._id] }
+          : col
+      );
+
       return {
         boardData: {
           ...state.boardData,
