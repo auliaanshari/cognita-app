@@ -14,16 +14,15 @@ import MentorDashboard from './MentorDashboard';
 import TaskItem from './TaskItem';
 import Column from './Column';
 import AiTutorModal from './AiTutorModal';
+import { toast } from 'sonner';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import TaskListSkeleton from './skeletons/TaskListSkeleton';
 import { Skeleton } from './ui/skeleton';
 
 export default function Board({ boardId }) {
-  const { boardData, loading } = useBoardStore((state) => ({
-    boardData: state.boardData,
-    loading: state.loading,
-  }));
+  const loading = useBoardStore((state) => state.loading);
+  const boardData = useBoardStore((state) => state.boardData);
   const {
     fetchBoard,
     moveCard,
@@ -43,7 +42,13 @@ export default function Board({ boardId }) {
 
     const channel = pusher.subscribe(`board-${boardId}`);
 
-    const handleTaskAdded = (newTask) => addTask(newTask);
+    const handleTaskAdded = (newTask) => {
+      addTask(newTask);
+      if (user.role === 'mentee' && newTask.menteeId._id === user.id) {
+        toast.success(`Tugas baru dari mentor: "${newTask.title}"`);
+      }
+    };
+
     const handleTaskRemoved = (data) => removeTask(data.taskId);
     const handleCardMoved = (data) => {
       moveCard(data.taskId, data.sourceColumnId, data.destColumnId);
@@ -89,6 +94,8 @@ export default function Board({ boardId }) {
     const activeContainer = active.data.current?.sortable?.containerId;
     const overContainer = over.data.current?.sortable?.containerId || over.id;
 
+    const socketId = pusher.connection.socket_id;
+
     if (activeContainer === overContainer) {
       if (activeId !== overId) {
         const activeColumn = boardData.columns.find(
@@ -112,6 +119,7 @@ export default function Board({ boardId }) {
             {
               columnId: activeContainer,
               taskIds: newOrderedIds,
+              socketId: socketId,
             },
             { params: { boardId } }
           )
@@ -122,12 +130,20 @@ export default function Board({ boardId }) {
       }
     } else {
       if (!activeContainer || !overContainer) return;
-      moveCard(activeId, activeContainer, overContainer); // Update UI
 
       const overColumn = boardData.columns.find((c) => c._id === overContainer);
-      if (!overColumn) {
-        updateTask({ _id: activeId, status: overColumn.title });
-      }
+      if (!overColumn) return;
+
+      const newStatus = overColumn.title;
+
+      useBoardStore
+        .getState()
+        .moveTaskAndUpdateStatus(
+          activeId,
+          activeContainer,
+          overContainer,
+          newStatus
+        );
 
       api
         .put(
@@ -136,6 +152,7 @@ export default function Board({ boardId }) {
             taskId: activeId,
             sourceColumnId: activeContainer,
             destColumnId: overContainer,
+            socketId: socketId,
           },
           { params: { boardId } }
         )

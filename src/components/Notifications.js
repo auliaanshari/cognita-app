@@ -22,17 +22,17 @@ export default function Notifications() {
   useEffect(() => {
     if (!user) return;
 
-    const channel = pusher.subscribe(`user-${user.id}`);
+    // const channel = pusher.subscribe(`user-${user.id}`);
 
-    channel.bind('notification:new', (notification) => {
-      console.log('🟣 Notifikasi Pusher diterima:', notification);
-      setNotifications((prev) => [notification, ...prev]);
-      setHasUnread(true);
-    });
+    // channel.bind('notification:new', (notification) => {
+    //   console.log('🟣 Notifikasi Pusher diterima:', notification);
+    //   setNotifications((prev) => [notification, ...prev]);
+    //   setHasUnread(true);
+    // });
 
-    return () => {
-      pusher.unsubscribe(`user-${user.id}`);
-    };
+    // return () => {
+    //   pusher.unsubscribe(`user-${user.id}`);
+    // };
   }, [user]);
 
   const handleOpenChange = (open) => {

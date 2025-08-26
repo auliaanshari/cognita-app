@@ -59,7 +59,6 @@ export const useBoardStore = create((set) => ({
           ? { ...col, taskIds: [...col.taskIds, newTask._id] }
           : col
       );
-
       return {
         boardData: {
           ...state.boardData,
@@ -154,4 +153,31 @@ export const useBoardStore = create((set) => ({
       };
     });
   },
+
+  moveTaskAndUpdateStatus: (taskId, sourceColumnId, destColumnId, newStatus) =>
+    set((state) => {
+      if (!state.boardData) return state;
+
+      const newTasks = state.boardData.tasks.map((task) =>
+        task._id === taskId ? { ...task, status: newStatus } : task
+      );
+
+      const newColumns = state.boardData.columns.map((col) => {
+        if (col._id === sourceColumnId) {
+          return { ...col, taskIds: col.taskIds.filter((id) => id !== taskId) };
+        }
+        if (col._id === destColumnId) {
+          return { ...col, taskIds: [...col.taskIds, taskId] };
+        }
+        return col;
+      });
+
+      return {
+        boardData: {
+          ...state.boardData,
+          tasks: newTasks,
+          columns: newColumns,
+        },
+      };
+    }),
 }));

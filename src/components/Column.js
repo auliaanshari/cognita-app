@@ -40,7 +40,6 @@ export default function Column({ column, tasks, onTaskDelete, onAskAI }) {
             <TaskItem
               key={task._id}
               task={task}
-              status={column.title}
               userRole={user?.role}
               currentUserId={user?.id}
               onAskAI={onAskAI}

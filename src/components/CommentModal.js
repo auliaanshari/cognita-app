@@ -35,11 +35,14 @@ export default function CommentModal({ task, isOpen, onClose, currentUserId }) {
         .finally(() => setIsLoading(false));
 
       const channel = pusher.subscribe(`task-${task._id}`);
-      channel.bind('comment:added', (newComment) => {
+      const handleNewComment = (newComment) => {
         setComments((prevComments) => [...prevComments, newComment]);
-      });
+      };
+
+      channel.bind('comment:added', handleNewComment);
 
       return () => {
+        channel.unbind('comment:added', handleNewComment);
         pusher.unsubscribe(`task-${task._id}`);
       };
     }
@@ -55,7 +58,11 @@ export default function CommentModal({ task, isOpen, onClose, currentUserId }) {
 
     setIsPosting(true);
     try {
-      await api.post(`/tasks/${task._id}/comments`, { text: newComment });
+      const socketId = pusher.connection.socket_id;
+      await api.post(`/tasks/${task._id}/comments`, {
+        text: newComment,
+        socketId: socketId,
+      });
       setNewComment('');
     } catch (error) {
       console.error('Gagal mengirim komentar:', error);

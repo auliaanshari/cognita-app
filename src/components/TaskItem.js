@@ -12,7 +12,6 @@ import { CSS } from '@dnd-kit/utilities';
 
 export default function TaskItem({
   task,
-  status,
   onAskAI,
   onTaskDelete,
   currentUserId,
@@ -79,9 +78,9 @@ export default function TaskItem({
           {/* Status Badge */}
           <span
             className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${
-              status === 'To Do'
+              task.status === 'To Do'
                 ? 'bg-yellow-200 text-yellow-800'
-                : status === 'In Progress'
+                : task.status === 'In Progress'
                   ? 'bg-blue-200 text-blue-800'
                   : 'bg-green-200 text-green-800'
             }`}

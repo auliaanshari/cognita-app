@@ -4,7 +4,7 @@ const Task = require('../models/Task');
 const pusher = require('../config/pusher');
 
 exports.moveTask = async (req, res) => {
-  const { taskId, sourceColumnId, destColumnId } = req.body;
+  const { taskId, sourceColumnId, destColumnId, socketId } = req.body;
   const { boardId } = req.query; // Ambil boardId dari query param
 
   try {
@@ -22,8 +22,10 @@ exports.moveTask = async (req, res) => {
     );
 
     // 2. Trigger Pusher event ke seluruh board
-    const payload = { ...req.body, updatedTask };
-    await pusher.trigger(`board-${boardId}`, 'card:moved', payload);
+    const payload = { taskId, sourceColumnId, destColumnId, updatedTask };
+    await pusher.trigger(`board-${boardId}`, 'card:moved', payload, {
+      socket_id: socketId,
+    });
 
     res.status(200).json({ success: true, data: updatedTask });
   } catch (error) {
@@ -33,7 +35,7 @@ exports.moveTask = async (req, res) => {
 };
 
 exports.reorderTask = async (req, res) => {
-  const { columnId, taskIds } = req.body;
+  const { columnId, taskIds, socketId } = req.body;
   const { boardId } = req.query;
 
   try {
@@ -41,10 +43,15 @@ exports.reorderTask = async (req, res) => {
     await Column.findByIdAndUpdate(columnId, { taskIds: taskIds });
 
     // 2. Trigger Pusher event ke seluruh board
-    await pusher.trigger(`board-${boardId}`, 'card:reordered', {
-      columnId,
-      taskIds,
-    });
+    await pusher.trigger(
+      `board-${boardId}`,
+      'card:reordered',
+      {
+        columnId,
+        taskIds,
+      },
+      { socket_id: socketId }
+    );
 
     res.status(200).json({ success: true });
   } catch (error) {

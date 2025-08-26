@@ -32,8 +32,10 @@ exports.addComment = async (req, res) => {
       return res.status(404).json({ message: 'Tugas tidak ditemukan.' });
     }
 
+    const { text, socketId } = req.body;
+
     const newComment = await Comment.create({
-      text: req.body.text,
+      text,
       taskId: req.params.taskId,
       authorId: req.user.id, // ID pengguna diambil dari token
     });
@@ -47,7 +49,8 @@ exports.addComment = async (req, res) => {
     await pusher.trigger(
       `task-${req.params.taskId}`,
       'comment:added',
-      populatedComment
+      populatedComment,
+      { socketId: socketId }
     );
     console.log(
       `Komentar baru dikirim ke Pusher channel task-${req.params.taskId}`

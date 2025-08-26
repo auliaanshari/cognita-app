@@ -40,22 +40,11 @@ exports.createTask = async (req, res) => {
       .populate('mentorId', 'username');
 
     const boardChannel = `board-${populatedTask.boardId.toString()}`;
-    const userChannel = `user-${populatedTask.menteeId._id.toString()}`;
 
     await pusher.trigger(boardChannel, 'task:added', populatedTask);
     console.log(
       `[Pusher] Event 'task:added' dikirim ke channel: ${boardChannel}`
     );
-
-    if (populatedTask.mentorId && populatedTask.mentorId.username) {
-      const notification = {
-        message: `Tugas baru: "${populatedTask.title}" dari ${populatedTask.mentorId.username}.`,
-      };
-      await pusher.trigger(userChannel, 'notification:new', notification);
-      console.log(
-        `[Pusher] Event 'notification:new' dikirim ke channel: ${userChannel}`
-      );
-    }
 
     res.status(201).json(populatedTask);
   } catch (error) {
